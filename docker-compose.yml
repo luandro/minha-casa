@@ -77,8 +77,10 @@ services:
   # https://github.com/kerberos/agent
   kerberos-agent:
     image: bh.cr/kerberos_io/agent
-    network_mode: host
+    # network_mode: host
     tty: true
+    ports:
+      - "8083:80"
     restart: always
     volumes:
       - 'kerberosagent_recordings:/home/agent/data/recordings:rw'
