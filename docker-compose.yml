@@ -8,20 +8,20 @@ volumes:
   raspap_config: {}
 services:
   # https://github.com/digidem/starter-interface
-  balena-interface:
-    build: services/interface
-    restart: always
-    environment:
-      NETWORK_MODE: bridge
-    ports:
-      - "80:80"
-      - "8079:8079"
-    volumes:
-      - interface_db:/app/db # Stores UI database files
-    privileged: true # This can be removed if not using the USB mounting feature
-    labels:
-      io.balena.features.supervisor-api: 1
-      io.balena.features.balena-api: 1
+  # balena-interface:
+  #   build: services/interface
+  #   restart: always
+  #   environment:
+  #     NETWORK_MODE: bridge
+  #   ports:
+  #     - "80:80"
+  #     - "8079:8079"
+  #   volumes:
+  #     - interface_db:/app/db # Stores UI database files
+  #   privileged: true # This can be removed if not using the USB mounting feature
+  #   labels:
+  #     io.balena.features.supervisor-api: 1
+  #     io.balena.features.balena-api: 1
   # https://github.com/RaspAP/raspap-balena
   raspap:
     build: services/raspap
