@@ -5,6 +5,9 @@ volumes:
   wifi_db:
   syncthing:
   portal:
+  kerberosagent_recordings:
+  kerberosagent_snapshots:
+  kerberosagent_config:
   # raspap_config: {}
 services:
   # https://github.com/digidem/starter-interface
@@ -71,6 +74,16 @@ services:
     cap_add:
       - NET_ADMIN
     privileged: true # This can be removed if you do not need the LED connectivity indicator.
+  # https://github.com/kerberos/agent
+  kerberos-agent:
+    image: bh.cr/kerberos_io/agent
+    network_mode: host
+    tty: true
+    restart: always
+    volumes:
+      - 'kerberosagent_recordings:/home/agent/data/recordings:rw'
+      - 'kerberosagent_snapshots:/home/agent/data/snapshots:rw'
+      - 'kerberosagent_config:/home/agent/data/config:rw'
   # https://hub.docker.com/r/filebrowser/filebrowser
   filebrowser:
     build: services/filebrowser
