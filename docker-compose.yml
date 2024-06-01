@@ -1,0 +1,101 @@
+version: "2.4"
+
+volumes:
+  interface_db:
+  wifi_db:
+  syncthing:
+  portal:
+  raspap_config: {}
+services:
+  # https://github.com/digidem/starter-interface
+  balena-interface:
+    build: services/interface
+    restart: always
+    environment:
+      NETWORK_MODE: bridge
+    ports:
+      - "80:80"
+      - "8079:8079"
+    volumes:
+      - interface_db:/app/db # Stores UI database files
+    privileged: true # This can be removed if not using the USB mounting feature
+    labels:
+      io.balena.features.supervisor-api: 1
+      io.balena.features.balena-api: 1
+  # https://github.com/RaspAP/raspap-balena
+  raspap:
+    build: services/raspap
+    restart: unless-stopped
+    ports:
+     - "80:80"
+    cap_add:
+      - SYS_TTY_CONFIG
+      - NET_ADMIN
+    volumes:
+      - "raspap_config:/etc/raspap"
+    dns:
+      - "127.0.0.1"
+      - "1.1.1.1"
+    network_mode: host
+    pid: host
+    privileged: true
+    labels:
+      io.balena.features.dbus: "1"
+    devices:
+      - /dev/tty0
+      - /dev/tty1
+    tmpfs:
+      - /run
+      - /sys/fs/cgroup
+      - /var/log/raspap
+    environment:
+      RASPAP_SSID: raspap-webgui
+      RASPAP_SSID_PASS: ChangeMe
+      RASPAP_COUNTRY: GB
+      RASPAP_WEBGUI_USER: admin
+      RASPAP_WEBGUI_PASS: secret
+      RASPAP_WEBGUI_PORT: 80
+  # # https://github.com/balena-labs-research/python-wifi-connect
+  # wifi:
+  #   image: ghcr.io/balena-labs-research/python-wifi-connect:latest
+  #   environment:
+  #     PWC_HOST: bridge
+  #     DBUS_SYSTEM_BUS_ADDRESS: "unix:path=/host/run/dbus/system_bus_socket"
+  #   network_mode: "host"
+  #   restart: always
+  #   volumes:
+  #     - wifi_db:/app/db # Optional if not setting the hotspot ssid and password via the API
+  #   labels:
+  #     io.balena.features.dbus: "1"
+  #   cap_add:
+  #     - NET_ADMIN
+  #   privileged: true # This can be removed if you do not need the LED connectivity indicator.
+  # https://hub.docker.com/r/filebrowser/filebrowser
+  filebrowser:
+    build: services/filebrowser
+    restart: unless-stopped
+    volumes:
+      - portal:/srv/portal
+    ports:
+      - 8081:80
+    command: -- c
+  # https://hub.docker.com/r/linuxserver/syncthing/
+  syncthing:
+    build: services/syncthing
+    volumes:
+      - syncthing:/config
+      - portal:/data/portal
+    ports:
+      - 8082:8384
+      - 22000:22000/tcp
+      - 22000:22000/udp
+      - 21027:21027/udp
+    restart: unless-stopped
+  # https://hub.docker.com/_/httpd
+  httpd:
+    build: services/httpd
+    ports:
+      - 8087:80
+    volumes:
+      - portal:/usr/local/apache2/htdocs
+    restart: unless-stopped

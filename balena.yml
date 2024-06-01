@@ -1,0 +1,28 @@
+name: "Minha Casa"
+type: "sw.application"
+version: 1.0.0
+description: "Home automation system"
+assets:
+  repository:
+    type: "blob.asset"
+    data:
+      url: "https://github.com/luandro/minha-casa"
+  logo:
+    type: "blob.asset"
+    data:
+      url: "https://static.vecteezy.com/system/resources/previews/000/348/301/original/house-vector-icon.jpg"
+data:
+  applicationConfigVariables:
+    - BALENA_HOST_CONFIG_gpu_mem: 64
+  applicationEnvironmentVariables:
+    # BALENA INTERFACE
+    - SET_HOSTNAME: "edt"
+    - UDEV: on # Enables ability to auto mount USB drives in to the container
+  defaultDeviceType: "raspberrypi4-64"
+  supportedDeviceTypes:
+    - "raspberrypi3-64"
+    - "raspberrypi4-64"
+    - "raspberrypi5"
+    - "rockpi-4b-rk3399"
+    - "rockpro64"
+    - "generic-aarch64"
