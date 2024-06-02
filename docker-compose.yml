@@ -169,7 +169,7 @@ services:
     volumes:
       - zigbee2mqtt:/app/data
     ports:
-      - 7000:7000
+      - 8089:7000
     privileged: true
 
   # https://hub.docker.com/r/codercom/code-server
@@ -183,7 +183,7 @@ services:
       - /config
     working_dir: /config
     ports:
-      - 9000:9000/tcp
+      - 8085:9000/tcp
     volumes:
       - config:/config
       - zigbee2mqtt:/config/zigbee2mqtt
@@ -205,7 +205,7 @@ services:
     volumes:
       - grafana:/var/lib/grafana
     ports:
-      - 3000:3000/tcp
+      - 8084:3000/tcp
 
   duplicati:
     image: linuxserver/duplicati
@@ -214,7 +214,7 @@ services:
       PGID: "0"
       CLI_ARGS: --webservice-interface=any
     ports:
-      - "8200:8200/tcp"
+      - "8090:8200/tcp"
     tmpfs:
       - /tmp
     volumes:
@@ -228,25 +228,24 @@ services:
       - netdatalib:/volumes/netdatalib
       - esphome:/volumes/esphome
 
-  # https://docs.frigate.video/frigate/installation
+   # https://blakeblackshear.github.io/frigate/installation
   frigate:
-    image: ghcr.io/blakeblackshear/frigate
+    build: frigate
+    privileged: true
     ports:
-      - "5000:5000"
+      - "8091:5000"
       - "1935:1935" # RTMP feeds
     volumes:
-      - frigate-config:/config
-      - frigate-media:/media/frigate
+      - config:/config:ro
+      - media:/media/frigate
     tmpfs:
       - /tmp/cache
     shm_size: 2048M
     environment:
       FRIGATE_RTSP_PASSWORD: "balena"
-      CONFIG_FILE: "/config/config.yml"
+      CONFIG_FILE: "/config/frigate.yml"
     labels:
       io.balena.features.kernel-modules: 1
-    devices:
-      - /dev/dri:/dev/dri
 
   # https://hub.docker.com/r/mrlt8/wyze-bridge/tags
   wyze-bridge:
