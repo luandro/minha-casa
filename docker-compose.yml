@@ -230,7 +230,7 @@ services:
 
    # https://blakeblackshear.github.io/frigate/installation
   frigate:
-    build: frigate
+    build: services/frigate
     privileged: true
     ports:
       - "8091:5000"
