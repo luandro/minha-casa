@@ -9,6 +9,20 @@ volumes:
   kerberosagent_snapshots:
   kerberosagent_config:
   # raspap_config: {}
+  config: {}
+  influxdb: {}
+  grafana: {}
+  mqtt: {}
+  zigbee2mqtt: {}
+  duplicati: {}
+  frigate-config: {}
+  frigate-media: {}
+  wyze-tokens: {}
+  tailscale: {}
+  netdatalib: {}
+  netdatacache: {}
+  esphome: {}
+
 services:
   # https://github.com/digidem/starter-interface
   balena-interface:
@@ -74,10 +88,10 @@ services:
     cap_add:
       - NET_ADMIN
     privileged: true # This can be removed if you do not need the LED connectivity indicator.
+
   # https://github.com/kerberos/agent
   kerberos-agent:
     image: bh.cr/kerberos_io/agent
-    # network_mode: host
     tty: true
     ports:
       - "8083:80"
@@ -86,6 +100,7 @@ services:
       - 'kerberosagent_recordings:/home/agent/data/recordings:rw'
       - 'kerberosagent_snapshots:/home/agent/data/snapshots:rw'
       - 'kerberosagent_config:/home/agent/data/config:rw'
+
   # https://hub.docker.com/r/filebrowser/filebrowser
   filebrowser:
     build: services/filebrowser
@@ -95,6 +110,7 @@ services:
     ports:
       - 8081:80
     command: -- c
+
   # https://hub.docker.com/r/linuxserver/syncthing/
   syncthing:
     build: services/syncthing
@@ -107,6 +123,7 @@ services:
       - 22000:22000/udp
       - 21027:21027/udp
     restart: unless-stopped
+
   # https://hub.docker.com/_/httpd
   httpd:
     build: services/httpd
@@ -115,3 +132,178 @@ services:
     volumes:
       - portal:/usr/local/apache2/htdocs
     restart: unless-stopped
+
+  # https://hub.docker.com/r/homeassistant/home-assistant
+  homeassistant:
+    image: homeassistant/home-assistant:2024.5.5@sha256:031d355a2e52e82fc33cd6854753fb19fc5d6a31af6f0f54c277d6f118ad993e
+    network_mode: host
+    volumes:
+      - config:/config
+    labels:
+      io.balena.features.dbus: "1"
+    environment:
+      DBUS_SYSTEM_BUS_ADDRESS: unix:path=/host/run/dbus/system_bus_socket
+    privileged: true
+
+  # https://hub.docker.com/_/eclipse-mosquitto
+  mqtt:
+    build: services/mqtt
+    ports:
+      - 1883:1883
+    volumes:
+      - mqtt:/mosquitto/data
+    tmpfs:
+      - /mosquitto/log
+
+  # https://esphome.io/guides/getting_started_command_line.html#installation
+  esphome:
+    image: ghcr.io/esphome/esphome
+    volumes:
+      - esphome:/config
+    privileged: true
+    network_mode: host
+
+  # https://www.zigbee2mqtt.io/guide/getting-started/#installation
+  zigbee2mqtt:
+    build: services/zigbee2mqtt
+    volumes:
+      - zigbee2mqtt:/app/data
+    ports:
+      - 7000:7000
+    privileged: true
+
+  # https://hub.docker.com/r/codercom/code-server
+  code-server:
+    image: codercom/code-server
+    command:
+      - --port=9000
+      - --auth=none
+      - --extensions-dir=/config/.vscode
+      - --user-data-dir=/config/.vscode
+      - /config
+    working_dir: /config
+    ports:
+      - 9000:9000/tcp
+    volumes:
+      - config:/config
+      - zigbee2mqtt:/config/zigbee2mqtt
+      - esphome:/config/esphome
+      - frigate-config:/config/frigate
+    user: root
+
+  # https://hub.docker.com/_/influxdb
+  influxdb:
+    image: influxdb
+    volumes:
+      - influxdb:/var/lib/influxdb
+    ports:
+      - 8086:8086
+
+  # https://hub.docker.com/r/grafana/grafana
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - grafana:/var/lib/grafana
+    ports:
+      - 3000:3000/tcp
+
+  duplicati:
+    image: linuxserver/duplicati
+    environment:
+      PUID: "0"
+      PGID: "0"
+      CLI_ARGS: --webservice-interface=any
+    ports:
+      - "8200:8200/tcp"
+    tmpfs:
+      - /tmp
+    volumes:
+      - duplicati:/config
+      - config:/volumes/config
+      - influxdb:/volumes/influxdb
+      - grafana:/volumes/grafana
+      - zigbee2mqtt:/volumes/zigbee2mqtt
+      - frigate-media:/volumes/frigate-media
+      - tailscale:/volumes/tailscale
+      - netdatalib:/volumes/netdatalib
+      - esphome:/volumes/esphome
+
+  # https://docs.frigate.video/frigate/installation
+  frigate:
+    image: ghcr.io/blakeblackshear/frigate
+    ports:
+      - "5000:5000"
+      - "1935:1935" # RTMP feeds
+    volumes:
+      - frigate-config:/config
+      - frigate-media:/media/frigate
+    tmpfs:
+      - /tmp/cache
+    shm_size: 2048M
+    environment:
+      FRIGATE_RTSP_PASSWORD: "balena"
+      CONFIG_FILE: "/config/config.yml"
+    labels:
+      io.balena.features.kernel-modules: 1
+    devices:
+      - /dev/dri:/dev/dri
+
+  # https://hub.docker.com/r/mrlt8/wyze-bridge/tags
+  wyze-bridge:
+    image: mrlt8/wyze-bridge
+    ports:
+      - 5001:5000 # WEB-UI
+    volumes:
+      - wyze-tokens:/tokens
+
+  # https://hub.docker.com/r/tailscale/tailscale
+  tailscale:
+    image: tailscale/tailscale
+    environment:
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SOCKET: /var/run/tailscale/tailscaled.sock
+      TS_USERSPACE: false
+      TS_AUTH_ONCE: false
+      TS_HOSTNAME: homeassistant
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_MODULE
+    labels:
+      io.balena.features.kernel-modules: 1
+    tmpfs:
+      - /tmp
+      - /run
+    volumes:
+      - tailscale:/var/lib/tailscale
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - |
+        modprobe tun || true
+        modprobe wireguard || true
+        mkdir -p /dev/net
+        [ ! -c /dev/net/tun ] && mknod /dev/net/tun c 10 200
+        /usr/local/bin/containerboot
+
+  netdata:
+    image: netdata/netdata:v1.45.5@sha256:5351fff01c2e7b718121d530fedf8af7f65dea64a34f99f4d627f1100c272dc8
+    privileged: true
+    network_mode: host
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    labels:
+      io.balena.features.balena-socket: 1
+      io.balena.features.procfs: 1
+      io.balena.features.supervisor-api: 1
+      io.balena.features.sysfs: 1
+    volumes:
+      - netdatalib:/var/lib/netdata
+      - netdatacache:/var/cache/netdata
+    environment:
+      DOCKER_HOST: "/var/run/balena.sock"
+      PGID: "991" # ls -nd /var/run/balena.sock | awk '{print $4}'
