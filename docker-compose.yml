@@ -236,8 +236,8 @@ services:
       - "8091:5000"
       - "1935:1935" # RTMP feeds
     volumes:
-      - config:/config:ro
-      - media:/media/frigate
+      - frigate-config:/config:ro
+      - frigate-media:/media/frigate
     tmpfs:
       - /tmp/cache
     shm_size: 2048M
@@ -288,7 +288,7 @@ services:
         /usr/local/bin/containerboot
 
   netdata:
-    image: netdata/netdata:v1.45.5@sha256:5351fff01c2e7b718121d530fedf8af7f65dea64a34f99f4d627f1100c272dc8
+    image: netdata/netdata
     privileged: true
     network_mode: host
     cap_add:
