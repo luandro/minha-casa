@@ -22,7 +22,13 @@ volumes:
   netdatalib: {}
   netdatacache: {}
   esphome: {}
-
+  adguardhome_work: {}
+  adguardhome_conf: {}
+  speedtest-data:
+  settings:
+  dashboard-data:
+  speed-tracker:
+  ssl-keys:
 services:
   # https://github.com/digidem/starter-interface
   balena-interface:
@@ -135,7 +141,7 @@ services:
 
   # https://hub.docker.com/r/homeassistant/home-assistant
   homeassistant:
-    image: homeassistant/home-assistant:2024.5.5@sha256:031d355a2e52e82fc33cd6854753fb19fc5d6a31af6f0f54c277d6f118ad993e
+    build: services/homeassistant
     network_mode: host
     volumes:
       - config:/config
@@ -196,8 +202,16 @@ services:
     image: influxdb
     volumes:
       - influxdb:/var/lib/influxdb
+      - 'speedtest-data:/data'
     ports:
       - 8086:8086
+    environment:
+      - INFLUXDB_DB=balena
+      - INFLUXDB_USER=balena
+      - INFLUXDB_ADMIN_ENABLED=true
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+      - INFLUXDB_DATA_DIR=/data
 
   # https://hub.docker.com/r/grafana/grafana
   grafana:
@@ -206,7 +220,7 @@ services:
       - grafana:/var/lib/grafana
     ports:
       - 8084:3000/tcp
-
+  # https://hub.docker.com/r/duplicati/duplicati
   duplicati:
     image: linuxserver/duplicati
     environment:
@@ -286,7 +300,56 @@ services:
         mkdir -p /dev/net
         [ ! -c /dev/net/tun ] && mknod /dev/net/tun c 10 200
         /usr/local/bin/containerboot
-
+  # https://github.com/AdGuardTeam/AdGuardHome
+  adguard:
+    image: "adguard/adguardhome"
+    network_mode: host
+    privileged: true
+    volumes:
+      - 'adguardhome_work:/opt/adguardhome/work:rw'
+      - 'adguardhome_conf:/opt/adguardhome/conf:rw'
+    command: --host 0.0.0.0 --port 8000 --no-check-update --config /opt/adguardhome/conf/AdGuardHome.yaml
+  # https://docs.speedtest-tracker.dev
+  speedtest-tracker:
+        container_name: speedtest-tracker
+        ports:
+            - 8092:80
+            - 8443:443
+        environment:
+            - PUID=1000
+            - PGID=1000
+            - DB_CONNECTION=sqlite
+        volumes:
+            - speed-tracker:/config
+            - ssl-keys:/config/keys
+        image: lscr.io/linuxserver/speedtest-tracker:latest
+        restart: unless-stopped
+  speedtest:
+    build: ./speedtest
+    privileged: true
+    restart: never
+    volumes:
+        - 'speedtest-data:/data'
+    network_mode: host
+    labels:
+      io.balena.features.supervisor-api: 1
+  # https://github.com/balena-labs-projects/connector
+  connector:
+    image:  bh.cr/balenalabs/connector
+    restart: always
+    labels:
+      io.balena.features.balena-api: '1'
+      io.balena.features.supervisor-api: 1
+    privileged: true
+  # https://github.com/balena-labs-projects/dashboard
+  dashboard:
+    restart: always
+    build: ./dashboard
+    ports:
+      - "80"
+    volumes:
+        - 'dashboard-data:/data'
+  # https://github.com/netdata/netdata
   netdata:
     image: netdata/netdata
     privileged: true
