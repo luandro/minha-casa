@@ -28,3 +28,34 @@ jobs:
           balena_release_type: draft
           release_tag: ${{ github.ref_name }}
           commit: ${{ github.sha }}
+
+  test-services:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Run Docker Compose
+        run: |
+          docker compose up -d --scale balena-interface=0 --scale wifi=0
+      - name: Wait for services to start
+        run: sleep 60
+
+      - name: Take screenshots
+        run: |
+          mkdir -p screenshots
+          for service in $(docker-compose ps --services); do
+            url="http://localhost:$(docker-compose port $service 80 | cut -d: -f2)"
+            if [ -n "$url" ]; then
+              google-chrome --headless --disable-gpu --screenshot="screenshots/$service.png" "$url"
+            fi
+          done
+
+      - name: Upload screenshots to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          timestamp=$(date +%Y%m%d%H%M%S)
+          pr_number=${{ github.event.number }}
+          aws s3 cp screenshots s3://my-s3-bucket/$pr_number/$timestamp/ --recursive
