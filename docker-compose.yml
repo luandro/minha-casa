@@ -308,10 +308,9 @@ services:
     volumes:
       - 'adguardhome_work:/opt/adguardhome/work:rw'
       - 'adguardhome_conf:/opt/adguardhome/conf:rw'
-    command: --host 0.0.0.0 --port 8000 --no-check-update --config /opt/adguardhome/conf/AdGuardHome.yaml
+    command: --host 0.0.0.0 --port 8093 --no-check-update --config /opt/adguardhome/conf/AdGuardHome.yaml
   # https://docs.speedtest-tracker.dev
   speedtest-tracker:
-        container_name: speedtest-tracker
         ports:
             - 8092:80
             - 8443:443
@@ -325,7 +324,7 @@ services:
         image: lscr.io/linuxserver/speedtest-tracker:latest
         restart: unless-stopped
   speedtest:
-    build: ./speedtest
+    build: services/speedtest
     privileged: true
     restart: never
     volumes:
@@ -344,7 +343,7 @@ services:
   # https://github.com/balena-labs-projects/dashboard
   dashboard:
     restart: always
-    build: ./dashboard
+    build: services/dashboard
     ports:
       - "80"
     volumes:
