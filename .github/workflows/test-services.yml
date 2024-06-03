@@ -18,7 +18,7 @@ jobs:
 
       - name: Run Docker Compose
         run: |
-          docker compose up -d --scale balena-interface=0 --scale wifi=0
+          docker compose up -d --scale balena-interface=0 --scale wifi=0 --scale speedtest=0
       - name: Wait for services to start
         run: sleep 60
 
