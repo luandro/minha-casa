@@ -20,17 +20,17 @@ sleep 30
 # 4. Is there an active WiFi connection?
 # iwgetid -r
 SSID="${SSID:=Earth_Defenders_Toolkit}"
-# TODO: change url to $HOSTNAME.local variable
-cat <<'END_HTML' >/usr/src/app/ui/index.html
+HOSTNAME=$(hostname)
+cat <<END_HTML >/usr/src/app/ui/index.html
 <!DOCTYPE HTML>
 <html lang="en-US">
     <head>
         <meta charset="UTF-8">
         <title>Earth Defenders Toolkit Captive Portal</title>
-        <meta http-equiv="refresh" content="0; url=http://edt.local">
+        <meta http-equiv="refresh" content="0; url=http://$HOSTNAME.local:8080">
     </head>
     <body>
-        <p>If you are not redirected automatically, follow this <a href="http://edt.local">link to Earth Defenders Toolkit</a>.</p>
+        <p>If you are not redirected automatically, follow this <a href="http://$HOSTNAME.local:8080">link to Earth Defenders Toolkit</a>.</p>
     </body>
 </html>
 END_HTML
