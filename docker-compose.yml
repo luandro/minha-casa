@@ -168,6 +168,7 @@ services:
       - esphome:/config
     privileged: true
     network_mode: host
+    entrypoint: /bin/sh -c "if [ ! -f /config/.hacs_installed ]; then wget -q -O - https://install.hacs.xyz | bash - && touch /config/.hacs_installed; fi && esphome"
 
   # https://www.zigbee2mqtt.io/guide/getting-started/#installation
   zigbee2mqtt:
